@@ -2,6 +2,7 @@ import argparse
 import re
 import sys
 from adb_android import adb_android
+from xml.etree import ElementTree
 
 
 class HostException(Exception):
@@ -123,6 +124,21 @@ def pull_db(args):
         _shell_command('rm -f %s/EnMicroMsg.db' % temp_dir)
 
 
+def get_default_uin(args):
+    shared_prefs_xml = ''.join(_su_shell_command('cat /data/data/com.tencent.mm/shared_prefs/system_config_prefs.xml'))
+    xml_tree = ElementTree.fromstring(shared_prefs_xml)
+    candidates = filter(lambda x: x.attrib['name'] == 'default_uin', xml_tree.getchildren())
+    if len(candidates) != 1:
+        print red('=' * 80)
+        print red('Could not parse system_config_prefs.xml.')
+        sys.exit(1)
+    default_uin = candidates[0].attrib['value']
+    print green('=' * 80)
+    print green('Found the following UIN:')
+    print
+    print cyan('  %s' % default_uin)
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -141,6 +157,9 @@ def parse_args():
                            help='Absolute path to the database to pull from the phone.'
                                 'If not specified, and only one database is found, that'
                                 'database will be auto-selected.')
+
+    get_uin_args = subparsers.add_parser('get_uin')
+    get_uin_args.set_defaults(fn=get_default_uin)
 
     return parser.parse_args()
 
