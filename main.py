@@ -1,7 +1,10 @@
 import argparse
+import hashlib
+import os
 import re
 import sys
 from adb_android import adb_android
+from pysqlcipher import dbapi2 as sqlite
 from xml.etree import ElementTree
 
 
@@ -139,6 +142,53 @@ def get_default_uin(args):
     print cyan('  %s' % default_uin)
 
 
+def _delete_file_if_exists(file_path):
+    try:
+        os.remove(file_path)
+    except OSError:
+        pass
+
+
+def _generate_key(imei, uin):
+    key = hashlib.md5(str(imei) + str(uin)).hexdigest()[0:7]
+    return key
+
+
+def decrypt(args):
+    print
+    print yellow('Generating key...')
+    key = _generate_key(args.imei, args.uin)
+    print
+    print green('=' * 80)
+    print green('The key is:')
+    print
+    print cyan('  %s' % key)
+    print
+    print yellow('Decrypting, hang on...')
+    _delete_file_if_exists(args.output_file)
+    conn = sqlite.connect(args.input_file)
+    c = conn.cursor()
+    c.execute('PRAGMA key = \'' + key + '\';')
+    c.execute('PRAGMA cipher_use_hmac = OFF;')
+    c.execute('PRAGMA cipher_page_size = 1024;')
+    c.execute('PRAGMA kdf_iter = 4000;')
+    try:
+        c.execute('ATTACH DATABASE \'%s\' AS wechatdecrypted KEY \'\';' % args.output_file)
+        c.execute('SELECT sqlcipher_export(\'wechatdecrypted\');')
+        c.execute('DETACH DATABASE wechatdecrypted;')
+    except:
+        print
+        print red('=' * 80)
+        print red('An error occurred.')
+        sys.exit(1)
+    else:
+        print
+        print green('=' * 80)
+        print green('Success!')
+    finally:
+        c.close()
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -160,6 +210,21 @@ def parse_args():
 
     get_uin_args = subparsers.add_parser('get_uin')
     get_uin_args.set_defaults(fn=get_default_uin)
+
+    decrypt_args = subparsers.add_parser('decrypt')
+    decrypt_args.set_defaults(fn=decrypt)
+    decrypt_args.add_argument('uin',
+                              metavar='UIN',
+                              type=str)
+    decrypt_args.add_argument('imei',
+                              metavar='IMEI',
+                              type=str)
+    decrypt_args.add_argument('input_file',
+                              metavar='INPUT_FILE',
+                              type=str)
+    decrypt_args.add_argument('output_file',
+                              metavar='OUTPUT_FILE',
+                              type=str)
 
     return parser.parse_args()
 
