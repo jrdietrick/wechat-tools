@@ -168,14 +168,45 @@ def decrypt(args):
     _delete_file_if_exists(args.output_file)
     conn = sqlite.connect(args.input_file)
     c = conn.cursor()
-    c.execute('PRAGMA key = \'' + key + '\';')
-    c.execute('PRAGMA cipher_use_hmac = OFF;')
-    c.execute('PRAGMA cipher_page_size = 1024;')
-    c.execute('PRAGMA kdf_iter = 4000;')
     try:
+        c.execute('PRAGMA cipher_default_use_hmac = OFF;')
+        c.execute('PRAGMA key = \'%s\';' % key)
         c.execute('ATTACH DATABASE \'%s\' AS wechatdecrypted KEY \'\';' % args.output_file)
         c.execute('SELECT sqlcipher_export(\'wechatdecrypted\');')
         c.execute('DETACH DATABASE wechatdecrypted;')
+    except:
+        print
+        print red('=' * 80)
+        print red('An error occurred.')
+        sys.exit(1)
+    else:
+        print
+        print green('=' * 80)
+        print green('Success!')
+    finally:
+        c.close()
+
+
+def encrypt(args):
+    print
+    print yellow('Generating key...')
+    key = _generate_key(args.imei, args.uin)
+    print
+    print green('=' * 80)
+    print green('The key is:')
+    print
+    print cyan('  %s' % key)
+    print
+    print yellow('Encrypting, hang on...')
+    _delete_file_if_exists(args.output_file)
+    conn = sqlite.connect(args.input_file)
+    c = conn.cursor()
+    try:
+        c.execute('PRAGMA cipher_default_use_hmac = OFF;')
+        c.execute('ATTACH DATABASE \'%s\' AS encrypted KEY \'%s\';' % (args.output_file, key))
+        c.execute('PRAGMA cipher_use_hmac = OFF;')
+        c.execute('SELECT sqlcipher_export(\'encrypted\');')
+        c.execute('DETACH DATABASE encrypted;')
     except:
         print
         print red('=' * 80)
@@ -223,6 +254,21 @@ def parse_args():
                               metavar='INPUT_FILE',
                               type=str)
     decrypt_args.add_argument('output_file',
+                              metavar='OUTPUT_FILE',
+                              type=str)
+
+    encrypt_args = subparsers.add_parser('encrypt')
+    encrypt_args.set_defaults(fn=encrypt)
+    encrypt_args.add_argument('uin',
+                              metavar='UIN',
+                              type=str)
+    encrypt_args.add_argument('imei',
+                              metavar='IMEI',
+                              type=str)
+    encrypt_args.add_argument('input_file',
+                              metavar='INPUT_FILE',
+                              type=str)
+    encrypt_args.add_argument('output_file',
                               metavar='OUTPUT_FILE',
                               type=str)
 
