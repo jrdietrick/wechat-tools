@@ -220,6 +220,32 @@ def encrypt(args):
         c.close()
 
 
+def push_db(args):
+    # Find a writable location
+    temp_dir = _find_nonroot_writable_dir()
+
+    try:
+        # Copy the DB to the phone first
+        print yellow('Pushing the DB to the device...')
+        status_code, output = adb_android.push(args.input_file, '%s/EnMicroMsg.db' % temp_dir)
+
+        print yellow('Copying the DB to its final home...')
+        _su_shell_command('cp %s/EnMicroMsg.db %s' % (temp_dir, args.database_path))
+    except:
+        print
+        print red('=' * 80)
+        print red('An error occurred.')
+        sys.exit(1)
+    else:
+        print
+        print green('=' * 80)
+        print green('Success!')
+    finally:
+        # Make sure to clean up!
+        print yellow('Cleaning up...')
+        _shell_command('rm -f %s/EnMicroMsg.db' % temp_dir)
+
+
 def parse_args():
     parser = argparse.ArgumentParser()
 
@@ -271,6 +297,15 @@ def parse_args():
     encrypt_args.add_argument('output_file',
                               metavar='OUTPUT_FILE',
                               type=str)
+
+    push_args = subparsers.add_parser('push')
+    push_args.set_defaults(fn=push_db)
+    push_args.add_argument('input_file',
+                           metavar='INPUT_FILE',
+                           type=str)
+    push_args.add_argument('database_path',
+                           metavar='DATABASE_PATH',
+                           type=str)
 
     return parser.parse_args()
 
