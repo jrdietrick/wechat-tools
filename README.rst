@@ -69,6 +69,24 @@ And now you have a cleartext SQLite database!
     0000060: 00 2d e2 26 05 00 00 00 42 02 97 00 00 00 01 81  .-.&....B.......
     0000070: 03 fb 03 f6 03 f1 03 ec 03 e7 03 e2 03 dd 03 d8  ................
 
+Migrating to a new device
+=========================
+It's possible to use these tools to migrate your WeChat history from one (rooted, Android) device to another (also rooted, Android) device. This process is not exact, but roughly it looks like this:
+
+#. Make sure you have the IMEIs for your old and new device (check Google for how to find this).
+#. Make sure you know your WeChat UIN (use ``python main.py get_uin`` with your old device hooked up to ADB).
+#. Install WeChat on your new device (preferably the same version of WeChat to avoid any possible schema or migration issues). Don't sign in yet.
+#. Enable Airplane Mode on your old device.
+#. Log in to WeChat on your new device (this will create the requisite data directories for your account).
+#. Once you are logged in, immediately enable Airplane Mode on your new device, too. (**If you don't, any messages you receive between this moment and completing the transfer will be lost!**)
+#. Force-close WeChat on your new device.
+#. Plug in your old device and pull the database: ``python main.py pull``.
+#. Decrypt the database with your old device's IMEI, and your WeChat UIN: ``python main.py decrypt``.
+#. Re-encrypt the database with your new device's IMEI, and (the same as for decryption step) WeChat UIN: ``python main.py encrypt``.
+#. Push the database to your new phone's data directory, in the same location: ``python main.py push`` (use ``python main.py find`` to find the likely database location).
+#. Disable Airplane Mode and open WeChat. It will take a long time to read the database the first time! But when it's done, you'll have all your conversation history!
+
+Migrating other information like voice messages, emojis, images, etc. is also possible (and has been tested!), but is outside the scope of this document at present.
 
 Credits
 =======
