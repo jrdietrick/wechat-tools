@@ -120,7 +120,15 @@ def pull_db(args):
 
         print yellow('Pulling the DB to your computer...')
         status_code, output = adb_android.pull('%s/EnMicroMsg.db' % temp_dir, args.output_file)
-
+    except:
+        print
+        print red('=' * 80)
+        print red('An error occurred.')
+        sys.exit(1)
+    else:
+        print
+        print green('=' * 80)
+        print green('Success!')
     finally:
         # Make sure to clean up!
         print yellow('Cleaning up...')
